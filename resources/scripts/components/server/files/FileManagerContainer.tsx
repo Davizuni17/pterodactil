@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { httpErrorToHuman } from '@/api/http';
 import { CSSTransition } from 'react-transition-group';
 import Spinner from '@/components/elements/Spinner';
@@ -22,9 +22,13 @@ import ErrorBoundary from '@/components/elements/ErrorBoundary';
 import { FileActionCheckbox } from '@/components/server/files/SelectFileCheckbox';
 import { hashToPath } from '@/helpers';
 import style from './style.module.css';
+import Input from '@/components/elements/Input';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSearch } from '@fortawesome/free-solid-svg-icons';
 
 const sortFiles = (files: FileObject[]): FileObject[] => {
     const sortedFiles: FileObject[] = files
+        .slice()
         .sort((a, b) => a.name.localeCompare(b.name))
         .sort((a, b) => (a.isFile === b.isFile ? 0 : a.isFile ? 1 : -1));
     return sortedFiles.filter((file, index) => index === 0 || file.name !== sortedFiles[index - 1].name);
@@ -38,6 +42,8 @@ export default () => {
     const clearFlashes = useStoreActions((actions) => actions.flashes.clearFlashes);
     const setDirectory = ServerContext.useStoreActions((actions) => actions.files.setDirectory);
 
+    const [searchTerm, setSearchTerm] = useState('');
+
     const setSelectedFiles = ServerContext.useStoreActions((actions) => actions.files.setSelectedFiles);
     const selectedFilesLength = ServerContext.useStoreState((state) => state.files.selectedFiles.length);
 
@@ -45,14 +51,28 @@ export default () => {
         clearFlashes('files');
         setSelectedFiles([]);
         setDirectory(hashToPath(hash));
+        setSearchTerm('');
     }, [hash]);
 
     useEffect(() => {
         mutate();
     }, [directory]);
 
+    const visibleFiles = useMemo(() => {
+        if (!files) return null;
+
+        const term = searchTerm.trim().toLowerCase();
+        const sorted = sortFiles(files);
+
+        if (!term) return sorted;
+        return sorted.filter((file) => file.name.toLowerCase().includes(term));
+    }, [files, searchTerm]);
+
+    const selectableCount = visibleFiles?.length ?? 0;
+    const isAllSelected = selectableCount > 0 && selectedFilesLength === selectableCount;
+
     const onSelectAllClick = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedFiles(e.currentTarget.checked ? files?.map((file) => file.name) || [] : []);
+        setSelectedFiles(e.currentTarget.checked ? visibleFiles?.map((file) => file.name) ?? [] : []);
     };
 
     if (error) {
@@ -68,7 +88,7 @@ export default () => {
                             <FileActionCheckbox
                                 type={'checkbox'}
                                 css={tw`mx-4`}
-                                checked={selectedFilesLength === (files?.length === 0 ? -1 : files?.length)}
+                                checked={isAllSelected}
                                 onChange={onSelectAllClick}
                             />
                         }
@@ -85,6 +105,21 @@ export default () => {
                     </Can>
                 </div>
             </ErrorBoundary>
+            <div css={tw`mb-4`}>
+                <div css={tw`relative max-w-full md:max-w-md`}>
+                    <div
+                        css={tw`pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-neutral-400`}
+                    >
+                        <FontAwesomeIcon icon={faSearch} />
+                    </div>
+                    <Input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                        placeholder={'Buscar'}
+                        css={tw`pl-10`}
+                    />
+                </div>
+            </div>
             {!files ? (
                 <Spinner size={'large'} centered />
             ) : (
@@ -94,7 +129,7 @@ export default () => {
                     ) : (
                         <CSSTransition classNames={'fade'} timeout={150} appear in>
                             <div>
-                                {files.length > 250 && (
+                                {files.length > 250 && !searchTerm.trim() && (
                                     <div css={tw`rounded bg-yellow-400 mb-px p-3`}>
                                         <p css={tw`text-yellow-900 text-sm text-center`}>
                                             This directory is too large to display in the browser, limiting the output
@@ -102,9 +137,13 @@ export default () => {
                                         </p>
                                     </div>
                                 )}
-                                {sortFiles(files.slice(0, 250)).map((file) => (
-                                    <FileObjectRow key={file.key} file={file} />
-                                ))}
+                                {visibleFiles && visibleFiles.length === 0 ? (
+                                    <p css={tw`text-sm text-neutral-400 text-center py-6`}>No hay resultados.</p>
+                                ) : (
+                                    (visibleFiles ?? [])
+                                        .slice(0, 250)
+                                        .map((file) => <FileObjectRow key={file.key} file={file} />)
+                                )}
                                 <MassActionsBar />
                             </div>
                         </CSSTransition>

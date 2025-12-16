@@ -6,7 +6,10 @@
 @endsection
 
 @section('content-header')
-    <h1>Panel Settings<small>Configure Pterodactyl to your liking.</small></h1>
+    <div class="modern-hero">
+        <h1 style="margin:0; font-size: 2.5rem; font-weight: 700;">Panel Settings</h1>
+        <p style="margin:5px 0 0; opacity: 0.9;">Configure Pterodactyl to your liking.</p>
+    </div>
     <ol class="breadcrumb">
         <li><a href="{{ route('admin.index') }}">Admin</a></li>
         <li class="active">Settings</li>
@@ -34,17 +37,17 @@
                             <div class="form-group col-md-4">
                                 <label class="control-label">Require 2-Factor Authentication</label>
                                 <div>
-                                    <div class="btn-group" data-toggle="buttons">
+                                    <div class="btn-group" data-toggle="buttons" style="width: 100%;">
                                         @php
                                             $level = old('pterodactyl:auth:2fa_required', config('pterodactyl.auth.2fa_required'));
                                         @endphp
-                                        <label class="btn btn-primary @if ($level == 0) active @endif">
+                                        <label class="btn btn-primary @if ($level == 0) active @endif" style="width: 33%;">
                                             <input type="radio" name="pterodactyl:auth:2fa_required" autocomplete="off" value="0" @if ($level == 0) checked @endif> Not Required
                                         </label>
-                                        <label class="btn btn-primary @if ($level == 1) active @endif">
+                                        <label class="btn btn-primary @if ($level == 1) active @endif" style="width: 33%;">
                                             <input type="radio" name="pterodactyl:auth:2fa_required" autocomplete="off" value="1" @if ($level == 1) checked @endif> Admin Only
                                         </label>
-                                        <label class="btn btn-primary @if ($level == 2) active @endif">
+                                        <label class="btn btn-primary @if ($level == 2) active @endif" style="width: 34%;">
                                             <input type="radio" name="pterodactyl:auth:2fa_required" autocomplete="off" value="2" @if ($level == 2) checked @endif> All Users
                                         </label>
                                     </div>

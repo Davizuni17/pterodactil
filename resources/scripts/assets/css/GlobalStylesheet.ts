@@ -1,9 +1,18 @@
 import tw from 'twin.macro';
-import { createGlobalStyle } from 'styled-components/macro';
+import { createGlobalStyle, keyframes } from 'styled-components/macro';
+
+const gradientAnimation = keyframes`
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+`;
 
 export default createGlobalStyle`
     body {
-        ${tw`font-sans bg-neutral-800 text-neutral-200`};
+        ${tw`font-sans text-neutral-200`};
+        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        background-size: 400% 400%;
+        animation: ${gradientAnimation} 15s ease infinite;
         letter-spacing: 0.015em;
     }
 
@@ -62,5 +71,24 @@ export default createGlobalStyle`
 
     ::-webkit-scrollbar-corner {
         background: transparent;
+    }
+
+    .fade-appear,
+    .fade-enter {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    .fade-appear-active,
+    .fade-enter-active {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 500ms ease-out, transform 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .fade-exit {
+        opacity: 1;
+    }
+    .fade-exit-active {
+        opacity: 0;
+        transition: opacity 300ms ease-in;
     }
 `;

@@ -35,3 +35,6 @@ resources/lang/locales.js
 /public/build
 /public/hot
 result
+
+docker/database/
+wings_data/
