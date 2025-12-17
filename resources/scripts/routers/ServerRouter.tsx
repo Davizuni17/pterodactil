@@ -1,6 +1,6 @@
 import TransferListener from '@/components/server/TransferListener';
 import React, { useEffect, useState } from 'react';
-import { Route, Switch, useLocation, useRouteMatch } from 'react-router-dom';
+import { Link, Route, Switch, useLocation, useRouteMatch } from 'react-router-dom';
 import TransitionRouter from '@/TransitionRouter';
 import WebsocketHandler from '@/components/server/WebsocketHandler';
 import { ServerContext } from '@/state/server';
@@ -71,6 +71,16 @@ export default () => {
             >
                 <FontAwesomeIcon icon={faBars} />
             </button>
+
+            {/* Exit to dashboard. */}
+            <Link
+                to={'/'}
+                className='fixed top-4 right-4 z-40 h-10 px-4 inline-flex items-center justify-center text-sm font-medium text-gray-100 bg-purple-500/20 rounded-xl border border-purple-400/20 hover:bg-purple-500/30 hover:border-purple-400/30 transition-all'
+                aria-label='Go to Dashboard'
+                title='Dashboard'
+            >
+                Dashboard
+            </Link>
 
             {!uuid || !id ? (
                 error ? (
