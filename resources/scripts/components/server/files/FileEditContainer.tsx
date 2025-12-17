@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import getFileContents from '@/api/server/files/getFileContents';
 import { httpErrorToHuman } from '@/api/http';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
@@ -20,6 +20,9 @@ import ErrorBoundary from '@/components/elements/ErrorBoundary';
 import { encodePathSegments, hashToPath } from '@/helpers';
 import { dirname } from 'path';
 import CodemirrorEditor from '@/components/elements/CodemirrorEditor';
+import copy from 'copy-to-clipboard';
+import Fade from '@/components/elements/Fade';
+import Portal from '@/components/elements/Portal';
 
 export default () => {
     const [error, setError] = useState('');
@@ -28,6 +31,7 @@ export default () => {
     const [content, setContent] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [mode, setMode] = useState('text/plain');
+    const [copied, setCopied] = useState(false);
 
     const history = useHistory();
     const { hash } = useLocation();
@@ -37,7 +41,19 @@ export default () => {
     const setDirectory = ServerContext.useStoreActions((actions) => actions.files.setDirectory);
     const { addError, clearFlashes } = useFlash();
 
-    let fetchFileContent: null | (() => Promise<string>) = null;
+    const fetchFileContent = useRef<null | (() => Promise<string>)>(null);
+
+    useEffect(() => {
+        if (!copied) return;
+
+        const timeout = setTimeout(() => {
+            setCopied(false);
+        }, 2500);
+
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, [copied]);
 
     useEffect(() => {
         if (action === 'new') return;
@@ -56,13 +72,14 @@ export default () => {
     }, [action, uuid, hash]);
 
     const save = (name?: string) => {
-        if (!fetchFileContent) {
+        if (!fetchFileContent.current) {
             return;
         }
 
         setLoading(true);
         clearFlashes('files:view');
-        fetchFileContent()
+        fetchFileContent
+            .current()
             .then((content) => saveFileContents(uuid, name || hashToPath(hash), content))
             .then(() => {
                 if (name) {
@@ -77,6 +94,23 @@ export default () => {
                 addError({ message: httpErrorToHuman(error), key: 'files:view' });
             })
             .then(() => setLoading(false));
+    };
+
+    const copyAll = () => {
+        if (!fetchFileContent.current) {
+            return;
+        }
+
+        fetchFileContent
+            .current()
+            .then((text) => {
+                copy(text);
+                setCopied(true);
+            })
+            .catch((error) => {
+                console.error(error);
+                addError({ message: httpErrorToHuman(error), key: 'files:view' });
+            });
     };
 
     if (error) {
@@ -118,7 +152,7 @@ export default () => {
                     onModeChanged={setMode}
                     initialContent={content}
                     fetchContent={(value) => {
-                        fetchFileContent = value;
+                        fetchFileContent.current = value;
                     }}
                     onContentSaved={() => {
                         if (action !== 'edit') {
@@ -130,6 +164,9 @@ export default () => {
                 />
             </div>
             <div css={tw`flex justify-end mt-4`}>
+                <Button css={tw`flex-1 sm:flex-none mr-4`} color={'grey'} isSecondary onClick={copyAll}>
+                    Copy
+                </Button>
                 <div css={tw`flex-1 sm:flex-none rounded bg-neutral-900 mr-4`}>
                     <Select value={mode} onChange={(e) => setMode(e.currentTarget.value)}>
                         {modes.map((mode) => (
@@ -153,6 +190,18 @@ export default () => {
                     </Can>
                 )}
             </div>
+
+            {copied && (
+                <Portal>
+                    <Fade in appear timeout={250} key={copied ? 'visible' : 'invisible'}>
+                        <div className={'fixed z-50 bottom-0 right-0 m-4'}>
+                            <div className={'rounded-md py-3 px-4 text-gray-200 bg-neutral-600/95 shadow'}>
+                                <p>Copied text to clipboard.</p>
+                            </div>
+                        </div>
+                    </Fade>
+                </Portal>
+            )}
         </PageContentBlock>
     );
 };
