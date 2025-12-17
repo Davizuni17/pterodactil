@@ -6,7 +6,7 @@
     }
 
     @screen md {
-        @apply flex flex-1 justify-end mb-0;
+        @apply flex flex-1 flex-wrap justify-end gap-4 mb-0;
 
         & button {
             @apply w-auto;
