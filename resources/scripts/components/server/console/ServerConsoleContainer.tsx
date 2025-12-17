@@ -20,7 +20,7 @@ import StatGraphs from '@/components/server/console/StatGraphs';
 export type PowerAction = 'start' | 'stop' | 'restart' | 'kill';
 
 const NodeBanner = styled.div`
-    ${tw`w-full px-4 py-3 mb-6 rounded-2xl text-white flex items-center shadow-lg border border-purple-500/10`};
+    ${tw`w-full pl-16 pr-32 md:pl-6 md:pr-32 py-3 mb-6 rounded-2xl text-white flex items-center shadow-lg border border-purple-500/10`};
     ${tw`bg-gradient-to-r from-purple-600/30 via-indigo-600/20 to-blue-600/30 backdrop-blur-md`};
 `;
 
@@ -97,7 +97,7 @@ const ServerConsoleContainer = () => {
 
             <NodeBanner>
                 <FontAwesomeIcon icon={faServer} className={'mr-3 text-lg sm:text-xl'} />
-                <span className={'font-semibold text-sm sm:text-base'}>NODE: {node}</span>
+                <span className={'font-semibold text-xs sm:text-sm'}>NODE: {node}</span>
                 <span className={'ml-auto text-xs sm:text-sm text-white/70'}>High Performance Node</span>
             </NodeBanner>
 
