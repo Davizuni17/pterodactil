@@ -14,6 +14,19 @@
     }
 }
 
+.fab_container {
+    @apply fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3;
+}
+
+.fab_menu {
+    @apply flex flex-col items-stretch gap-2 p-3 rounded bg-neutral-700 shadow-lg border border-neutral-600;
+
+    & a,
+    & button {
+        @apply w-full;
+    }
+}
+
 .file_row {
     @apply flex items-center cursor-pointer bg-neutral-700 rounded-sm mb-px text-sm no-underline;
     @apply hover:text-neutral-100 hover:bg-neutral-600;

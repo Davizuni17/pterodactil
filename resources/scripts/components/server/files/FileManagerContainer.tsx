@@ -24,7 +24,7 @@ import { hashToPath } from '@/helpers';
 import style from './style.module.css';
 import Input from '@/components/elements/Input';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch } from '@fortawesome/free-solid-svg-icons';
 
 const sortFiles = (files: FileObject[]): FileObject[] => {
     const sortedFiles: FileObject[] = files
@@ -43,6 +43,7 @@ export default () => {
     const setDirectory = ServerContext.useStoreActions((actions) => actions.files.setDirectory);
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [actionsOpen, setActionsOpen] = useState(false);
 
     const setSelectedFiles = ServerContext.useStoreActions((actions) => actions.files.setSelectedFiles);
     const selectedFilesLength = ServerContext.useStoreState((state) => state.files.selectedFiles.length);
@@ -52,6 +53,7 @@ export default () => {
         setSelectedFiles([]);
         setDirectory(hashToPath(hash));
         setSearchTerm('');
+        setActionsOpen(false);
     }, [hash]);
 
     useEffect(() => {
@@ -82,7 +84,7 @@ export default () => {
     return (
         <ServerContentBlock title={'File Manager'} showFlashKey={'files'}>
             <ErrorBoundary>
-                <div className={'flex flex-wrap-reverse md:flex-wrap mb-4'}>
+                <div className={'mb-4'}>
                     <FileManagerBreadcrumbs
                         renderLeft={
                             <FileActionCheckbox
@@ -93,18 +95,33 @@ export default () => {
                             />
                         }
                     />
-                    <Can action={'file.create'}>
-                        <div className={style.manager_actions}>
+                </div>
+            </ErrorBoundary>
+
+            <Can action={'file.create'}>
+                <div className={style.fab_container}>
+                    {actionsOpen && (
+                        <div className={style.fab_menu} onClickCapture={() => setActionsOpen(false)}>
                             <FileManagerStatus />
                             <NewDirectoryButton />
                             <UploadButton />
                             <NavLink to={`/server/${id}/files/new${window.location.hash}`}>
-                                <Button>New File</Button>
+                                <Button className={'w-full'}>New File</Button>
                             </NavLink>
                         </div>
-                    </Can>
+                    )}
+
+                    <Button
+                        shape={Button.Shapes.IconSquare}
+                        aria-label={actionsOpen ? 'Close file actions' : 'Open file actions'}
+                        title={actionsOpen ? 'Close file actions' : 'Open file actions'}
+                        onClick={() => setActionsOpen((s) => !s)}
+                    >
+                        <FontAwesomeIcon icon={faPlus} />
+                    </Button>
                 </div>
-            </ErrorBoundary>
+            </Can>
+
             <div css={tw`mb-4`}>
                 <div css={tw`relative max-w-full md:max-w-md`}>
                     <div
