@@ -23,11 +23,11 @@ const glow = keyframes`
 
 // --- Styled Components ---
 const ChatContainer = styled(motion.div)`
-    ${tw`fixed bottom-6 right-6 z-50 flex flex-col items-end`};
+    ${tw`fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 z-50 flex flex-col items-end`};
 `;
 
 const ChatButton = styled(motion.button)`
-    ${tw`w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg flex items-center justify-center text-xl cursor-pointer focus:outline-none`};
+    ${tw`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg flex items-center justify-center text-lg sm:text-xl cursor-pointer focus:outline-none`};
     animation: ${float} 3s ease-in-out infinite;
     &:hover {
         ${tw`shadow-xl`};
@@ -35,17 +35,21 @@ const ChatButton = styled(motion.button)`
 `;
 
 const ChatWindow = styled(motion.div)`
-    ${tw`mb-4 w-80 md:w-96 bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-gray-700`};
+    ${tw`mb-4 w-full sm:w-80 md:w-96 bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-gray-700`};
     height: 500px;
     backdrop-filter: blur(10px);
+
+    @media (max-width: 640px) {
+        height: calc(100vh - 7rem);
+    }
 `;
 
 const Header = styled.div`
-    ${tw`p-4 bg-gray-800/50 border-b border-gray-700 flex justify-between items-center`};
+    ${tw`p-3 sm:p-4 bg-gray-800/50 border-b border-gray-700 flex justify-between items-center`};
 `;
 
 const MessagesArea = styled.div`
-    ${tw`flex-1 p-4 overflow-y-auto flex flex-col gap-3`};
+    ${tw`flex-1 p-3 sm:p-4 overflow-y-auto flex flex-col gap-3`};
     &::-webkit-scrollbar {
         width: 6px;
     }
@@ -56,7 +60,7 @@ const MessagesArea = styled.div`
 `;
 
 const InputArea = styled.div`
-    ${tw`p-3 bg-gray-800/50 border-t border-gray-700 flex items-center gap-2`};
+    ${tw`p-2.5 sm:p-3 bg-gray-800/50 border-t border-gray-700 flex flex-wrap sm:flex-nowrap items-center gap-2`};
 `;
 
 const MessageBubble = styled.div<{ isOwn?: boolean }>`
@@ -74,7 +78,7 @@ const ActionButton = styled.button`
 `;
 
 const TextInput = styled.input`
-    ${tw`flex-1 bg-gray-900/50 border border-gray-600 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors`};
+    ${tw`flex-1 min-w-0 bg-gray-900/50 border border-gray-600 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors`};
 `;
 
 // --- Types ---
@@ -243,33 +247,33 @@ export default () => {
                             <ActionButton title="Share Work" onClick={handleShareWork}>
                                 <FontAwesomeIcon icon={faServer} />
                             </ActionButton>
-                            
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                className="hidden" 
-                                accept="image/*" 
-                                onChange={handleImageUpload} 
+
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleImageUpload}
                             />
                             <ActionButton title="Send Image" onClick={() => fileInputRef.current?.click()}>
                                 <FontAwesomeIcon icon={faImage} />
                             </ActionButton>
 
-                            <ActionButton 
-                                title={isRecording ? "Stop Recording" : "Send Audio"} 
+                            <ActionButton
+                                title={isRecording ? "Stop Recording" : "Send Audio"}
                                 onClick={isRecording ? stopRecording : startRecording}
                                 className={isRecording ? "text-red-500 animate-pulse" : ""}
                             >
                                 <FontAwesomeIcon icon={isRecording ? faStop : faMicrophone} />
                             </ActionButton>
 
-                            <TextInput 
-                                placeholder="Type a message..." 
+                            <TextInput
+                                placeholder="Type a message..."
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
                             />
-                            <button 
+                            <button
                                 onClick={handleSend}
                                 className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-500 transition-colors"
                             >
@@ -280,7 +284,7 @@ export default () => {
                 )}
             </AnimatePresence>
 
-            <ChatButton 
+            <ChatButton
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
