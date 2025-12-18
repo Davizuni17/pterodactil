@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments, faPaperPlane, faMicrophone, faImage, faServer, faTimes, faUserShield, faStop } from '@fortawesome/free-solid-svg-icons';
 import { useStoreState } from 'easy-peasy';
 import { AnimatePresence, motion } from 'framer-motion';
-import http from '@/api/http';
+import http, { httpErrorToHuman } from '@/api/http';
 import useSWR from 'swr';
 
 // --- Animations ---
@@ -98,13 +98,26 @@ export default () => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
     const [isRecording, setIsRecording] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const user = useStoreState((state: any) => state.user.data);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
     // Fetch messages every 3 seconds
-    const { data: messages, mutate } = useSWR<Message[]>('/api/client/chat', (url) => http.get(url).then(r => r.data), { refreshInterval: 3000 });
+    const fetchMessages = async (): Promise<Message[]> => {
+        const resp = await http.get('/api/client/chat');
+        const payload = resp.data;
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        return [];
+    };
+
+    const {
+        data: messages = [],
+        error: fetchError,
+        mutate,
+    } = useSWR<Message[]>('/api/client/chat', fetchMessages, { refreshInterval: 3000 });
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,18 +125,41 @@ export default () => {
 
     useEffect(scrollToBottom, [messages, isOpen]);
 
-    const sendMessage = async (type: string, content: string, file?: File) => {
+    useEffect(() => {
+        if (fetchError) setErrorMessage(httpErrorToHuman(fetchError));
+    }, [fetchError]);
+
+    const sendMessage = async (type: Message['type'], content: string, file?: File) => {
         const formData = new FormData();
         formData.append('type', type);
         formData.append('content', content);
         if (file) formData.append('file', file);
 
+        const previousMessages = messages;
+        const optimisticMessage: Message = {
+            id: -Date.now(),
+            user: {
+                username: user?.username ?? 'You',
+                root_admin: Boolean(user?.rootAdmin),
+            },
+            content,
+            type,
+            attachment_url: file ? URL.createObjectURL(file) : undefined,
+            created_at: new Date().toISOString(),
+        };
+
+        setErrorMessage(null);
+        mutate([...previousMessages, optimisticMessage], false);
+
         try {
-            await http.post('/api/client/chat', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            mutate(); // Refresh messages
+            // Do not manually set Content-Type for FormData; axios will add the boundary.
+            const resp = await http.post('/api/client/chat', formData);
+            const created = resp.data as Message;
+            mutate([...previousMessages, created], false);
+            mutate(); // Revalidate from server
         } catch (e) {
+            mutate(previousMessages, false);
+            setErrorMessage(httpErrorToHuman(e));
             console.error(e);
         }
     };
@@ -202,6 +238,18 @@ export default () => {
                         </Header>
 
                         <MessagesArea>
+                            {errorMessage && (
+                                <div className="text-xs text-red-300 bg-red-900/20 border border-red-800 rounded-lg p-2">
+                                    {errorMessage}
+                                </div>
+                            )}
+
+                            {!errorMessage && messages.length === 0 && (
+                                <div className="text-xs text-gray-500 text-center mt-4">
+                                    No messages yet.
+                                </div>
+                            )}
+
                             {messages?.map((msg) => {
                                 const isOwn = msg.user.username === user?.username;
                                 return (
@@ -222,8 +270,8 @@ export default () => {
                                             {msg.type === 'share' && (
                                                 <div className="flex flex-col gap-1">
                                                     <span className="text-xs opacity-75">Shared a link:</span>
-                                                    <a href={msg.content.split(': ')[1]} target="_blank" rel="noreferrer" className="text-blue-300 underline break-all">
-                                                        {msg.content.split(': ')[1]}
+                                                    <a href={msg.content.split(': ')[1] || msg.content} target="_blank" rel="noreferrer" className="text-blue-300 underline break-all">
+                                                        {msg.content.split(': ')[1] || msg.content}
                                                     </a>
                                                 </div>
                                             )}
