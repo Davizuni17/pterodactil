@@ -1,17 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components/macro';
 import tw from 'twin.macro';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faComments,
-    faImage,
-    faMicrophone,
-    faPaperPlane,
-    faServer,
-    faStop,
-    faTimes,
-    faUserShield,
-} from '@fortawesome/free-solid-svg-icons';
+import { faComments, faPaperPlane, faMicrophone, faImage, faServer, faTimes, faUserShield, faStop } from '@fortawesome/free-solid-svg-icons';
 import { useStoreState } from 'easy-peasy';
 import { AnimatePresence, motion } from 'framer-motion';
 import http from '@/api/http';
@@ -35,9 +26,7 @@ const ChatContainer = styled(motion.div)`
     ${tw`fixed bottom-6 right-6 z-50 flex flex-col items-end`};
 `;
 
-const ChatButton = styled(motion.button).attrs({
-    type: 'button',
-})`
+const ChatButton = styled(motion.button)`
     ${tw`w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg flex items-center justify-center text-xl cursor-pointer focus:outline-none`};
     animation: ${float} 3s ease-in-out infinite;
     &:hover {
@@ -61,7 +50,7 @@ const MessagesArea = styled.div`
         width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255,255,255,0.1);
         border-radius: 3px;
     }
 `;
@@ -72,10 +61,7 @@ const InputArea = styled.div`
 
 const MessageBubble = styled.div<{ isOwn?: boolean }>`
     ${tw`p-3 rounded-2xl text-sm max-w-[80%] relative break-words`};
-    ${(props) =>
-        props.isOwn
-            ? tw`bg-purple-600 text-white self-end rounded-br-none`
-            : tw`bg-gray-700 text-gray-200 self-start rounded-bl-none`};
+    ${props => props.isOwn ? tw`bg-purple-600 text-white self-end rounded-br-none` : tw`bg-gray-700 text-gray-200 self-start rounded-bl-none`};
 `;
 
 const AdminBadge = styled.span`
@@ -83,25 +69,12 @@ const AdminBadge = styled.span`
     animation: ${glow} 2s infinite;
 `;
 
-const ActionButton = styled.button.attrs({
-    type: 'button',
-})`
+const ActionButton = styled.button`
     ${tw`text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10`};
 `;
 
 const TextInput = styled.input`
     ${tw`flex-1 bg-gray-900/50 border border-gray-600 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors`};
-`;
-
-const SharedImage = styled.img`
-    ${tw`max-w-full rounded-lg mt-1`};
-    max-height: 150px;
-`;
-
-const SharedAudio = styled.audio`
-    ${tw`mt-1`};
-    height: 30px;
-    max-width: 200px;
 `;
 
 // --- Types ---
@@ -127,19 +100,15 @@ export default () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
     // Fetch messages every 3 seconds
-    const { data: messages, mutate } = useSWR<Message[]>(
-        '/api/client/chat',
-        (url) => http.get(url).then((r) => r.data),
-        { refreshInterval: 3000 }
-    );
+    const { data: messages, mutate } = useSWR<Message[]>('/api/client/chat', (url) => http.get(url).then(r => r.data), { refreshInterval: 3000 });
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
     useEffect(scrollToBottom, [messages, isOpen]);
 
-    const sendMessage = async (type: Message['type'], content: string, file?: File) => {
+    const sendMessage = async (type: string, content: string, file?: File) => {
         const formData = new FormData();
         formData.append('type', type);
         formData.append('content', content);
@@ -147,7 +116,7 @@ export default () => {
 
         try {
             await http.post('/api/client/chat', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
             mutate(); // Refresh messages
         } catch (e) {
@@ -161,11 +130,8 @@ export default () => {
         setInputValue('');
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            handleSend();
-        }
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') handleSend();
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,8 +155,6 @@ export default () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 const audioFile = new File([audioBlob], 'voice_message.wav', { type: 'audio/wav' });
                 sendMessage('audio', 'Sent a voice message', audioFile);
-
-                mediaRecorder.stream.getTracks().forEach((t) => t.stop());
             };
 
             mediaRecorder.start();
@@ -224,17 +188,11 @@ export default () => {
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                     >
                         <Header>
-                            <div className='flex items-center gap-2'>
-                                <div className='w-2 h-2 rounded-full bg-green-500 animate-pulse' />
-                                <span className='font-bold text-white tracking-wide'>Global Chat</span>
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                <span className="font-bold text-white tracking-wide">Global Chat</span>
                             </div>
-                            <button
-                                type='button'
-                                title='Close chat'
-                                aria-label='Close chat'
-                                onClick={() => setIsOpen(false)}
-                                className='text-gray-400 hover:text-white'
-                            >
+                            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white">
                                 <FontAwesomeIcon icon={faTimes} />
                             </button>
                         </Header>
@@ -242,21 +200,14 @@ export default () => {
                         <MessagesArea>
                             {messages?.map((msg) => {
                                 const isOwn = msg.user.username === user?.username;
-                                const sharedUrl = msg.type === 'share' ? msg.content.split(': ')[1] : undefined;
-
                                 return (
-                                    <div
-                                        key={msg.id}
-                                        className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
-                                    >
+                                    <div key={msg.id} className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                                         {!isOwn && (
-                                            <div className='flex items-center gap-2 mb-1 ml-1'>
-                                                <span className='text-xs text-gray-400 font-bold'>
-                                                    {msg.user.username}
-                                                </span>
+                                            <div className="flex items-center gap-2 mb-1 ml-1">
+                                                <span className="text-xs text-gray-400 font-bold">{msg.user.username}</span>
                                                 {msg.user.root_admin && (
                                                     <AdminBadge>
-                                                        <FontAwesomeIcon icon={faUserShield} size='xs' />
+                                                        <FontAwesomeIcon icon={faUserShield} size="xs" />
                                                         ADMIN
                                                     </AdminBadge>
                                                 )}
@@ -264,31 +215,23 @@ export default () => {
                                         )}
                                         <MessageBubble isOwn={isOwn}>
                                             {msg.type === 'text' && msg.content}
-                                            {msg.type === 'share' && sharedUrl && (
-                                                <div className='flex flex-col gap-1'>
-                                                    <span className='text-xs opacity-75'>Shared a link:</span>
-                                                    <a
-                                                        href={sharedUrl}
-                                                        target='_blank'
-                                                        rel='noreferrer'
-                                                        className='text-blue-300 underline break-all'
-                                                    >
-                                                        {sharedUrl}
+                                            {msg.type === 'share' && (
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-xs opacity-75">Shared a link:</span>
+                                                    <a href={msg.content.split(': ')[1]} target="_blank" rel="noreferrer" className="text-blue-300 underline break-all">
+                                                        {msg.content.split(': ')[1]}
                                                     </a>
                                                 </div>
                                             )}
                                             {msg.type === 'image' && msg.attachment_url && (
-                                                <SharedImage src={msg.attachment_url} alt='Shared' />
+                                                <img src={msg.attachment_url} alt="Shared" className="max-w-full rounded-lg mt-1" style={{ maxHeight: '150px' }} />
                                             )}
                                             {msg.type === 'audio' && msg.attachment_url && (
-                                                <SharedAudio controls src={msg.attachment_url} />
+                                                <audio controls src={msg.attachment_url} className="mt-1" style={{ height: '30px', maxWidth: '200px' }} />
                                             )}
                                         </MessageBubble>
-                                        <span className='text-[10px] text-gray-500 mt-1 mx-1'>
-                                            {new Date(msg.created_at).toLocaleTimeString([], {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                            })}
+                                        <span className="text-[10px] text-gray-500 mt-1 mx-1">
+                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
                                 );
@@ -297,63 +240,47 @@ export default () => {
                         </MessagesArea>
 
                         <InputArea>
-                            <ActionButton title='Share Work' aria-label='Share Work' onClick={handleShareWork}>
+                            <ActionButton title="Share Work" onClick={handleShareWork}>
                                 <FontAwesomeIcon icon={faServer} />
                             </ActionButton>
-
-                            <label htmlFor='chat-image-upload' className='sr-only'>
-                                Upload image
-                            </label>
-                            <input
-                                id='chat-image-upload'
-                                type='file'
-                                title='Upload image'
-                                aria-label='Upload image'
-                                ref={fileInputRef}
-                                className='hidden'
-                                accept='image/*'
-                                onChange={handleImageUpload}
+                            
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                className="hidden" 
+                                accept="image/*" 
+                                onChange={handleImageUpload} 
                             />
-                            <ActionButton
-                                title='Send Image'
-                                aria-label='Send Image'
-                                onClick={() => fileInputRef.current?.click()}
-                            >
+                            <ActionButton title="Send Image" onClick={() => fileInputRef.current?.click()}>
                                 <FontAwesomeIcon icon={faImage} />
                             </ActionButton>
 
-                            <ActionButton
-                                title={isRecording ? 'Stop Recording' : 'Send Audio'}
-                                aria-label={isRecording ? 'Stop Recording' : 'Send Audio'}
+                            <ActionButton 
+                                title={isRecording ? "Stop Recording" : "Send Audio"} 
                                 onClick={isRecording ? stopRecording : startRecording}
-                                className={isRecording ? 'text-red-500 animate-pulse' : ''}
+                                className={isRecording ? "text-red-500 animate-pulse" : ""}
                             >
                                 <FontAwesomeIcon icon={isRecording ? faStop : faMicrophone} />
                             </ActionButton>
 
-                            <TextInput
-                                placeholder='Type a message...'
+                            <TextInput 
+                                placeholder="Type a message..." 
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
+                                onKeyPress={handleKeyPress}
                             />
-                            <button
-                                type='button'
-                                title='Send message'
-                                aria-label='Send message'
+                            <button 
                                 onClick={handleSend}
-                                className='w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-500 transition-colors'
+                                className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-500 transition-colors"
                             >
-                                <FontAwesomeIcon icon={faPaperPlane} size='sm' />
+                                <FontAwesomeIcon icon={faPaperPlane} size="sm" />
                             </button>
                         </InputArea>
                     </ChatWindow>
                 )}
             </AnimatePresence>
 
-            <ChatButton
-                aria-label={isOpen ? 'Close global chat' : 'Open global chat'}
-                title={isOpen ? 'Close global chat' : 'Open global chat'}
+            <ChatButton 
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
