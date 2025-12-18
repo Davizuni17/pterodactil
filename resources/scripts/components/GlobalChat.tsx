@@ -8,11 +8,14 @@ import {
     faMicrophone,
     faPaperPlane,
     faServer,
+    faStop,
     faTimes,
     faUserShield,
 } from '@fortawesome/free-solid-svg-icons';
 import { useStoreState } from 'easy-peasy';
 import { AnimatePresence, motion } from 'framer-motion';
+import http from '@/api/http';
+import useSWR from 'swr';
 
 // --- Animations ---
 const float = keyframes`
@@ -32,7 +35,9 @@ const ChatContainer = styled(motion.div)`
     ${tw`fixed bottom-6 right-6 z-50 flex flex-col items-end`};
 `;
 
-const ChatButton = styled(motion.button).attrs({ type: 'button' })`
+const ChatButton = styled(motion.button).attrs({
+    type: 'button',
+})`
     ${tw`w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg flex items-center justify-center text-xl cursor-pointer focus:outline-none`};
     animation: ${float} 3s ease-in-out infinite;
     &:hover {
@@ -66,7 +71,7 @@ const InputArea = styled.div`
 `;
 
 const MessageBubble = styled.div<{ isOwn?: boolean }>`
-    ${tw`p-3 rounded-2xl text-sm max-w-[80%] relative`};
+    ${tw`p-3 rounded-2xl text-sm max-w-[80%] relative break-words`};
     ${(props) =>
         props.isOwn
             ? tw`bg-purple-600 text-white self-end rounded-br-none`
@@ -78,7 +83,9 @@ const AdminBadge = styled.span`
     animation: ${glow} 2s infinite;
 `;
 
-const ActionButton = styled.button.attrs({ type: 'button' })`
+const ActionButton = styled.button.attrs({
+    type: 'button',
+})`
     ${tw`text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10`};
 `;
 
@@ -86,47 +93,45 @@ const TextInput = styled.input`
     ${tw`flex-1 bg-gray-900/50 border border-gray-600 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 transition-colors`};
 `;
 
+const SharedImage = styled.img`
+    ${tw`max-w-full rounded-lg mt-1`};
+    max-height: 150px;
+`;
+
+const SharedAudio = styled.audio`
+    ${tw`mt-1`};
+    height: 30px;
+    max-width: 200px;
+`;
+
 // --- Types ---
 interface Message {
     id: number;
-    user: string;
-    avatar: string;
+    user: {
+        username: string;
+        root_admin: boolean;
+    };
     content: string;
     type: 'text' | 'audio' | 'image' | 'share';
-    isAdmin?: boolean;
-    isOwn?: boolean;
-    timestamp: string;
+    attachment_url?: string;
+    created_at: string;
 }
 
 export default () => {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
     const user = useStoreState((state: any) => state.user.data);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
-    // Mock Messages
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 1,
-            user: 'System',
-            avatar: '',
-            content: 'Welcome to the Global Chat!',
-            type: 'text',
-            isAdmin: true,
-            timestamp: '12:00',
-            isOwn: false,
-        },
-        {
-            id: 2,
-            user: 'Davizuni17',
-            avatar: '',
-            content: 'Check out my new server config!',
-            type: 'text',
-            isAdmin: true,
-            timestamp: '12:05',
-            isOwn: false,
-        },
-    ]);
+    // Fetch messages every 3 seconds
+    const { data: messages, mutate } = useSWR<Message[]>(
+        '/api/client/chat',
+        (url) => http.get(url).then((r) => r.data),
+        { refreshInterval: 3000 }
+    );
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -134,29 +139,78 @@ export default () => {
 
     useEffect(scrollToBottom, [messages, isOpen]);
 
+    const sendMessage = async (type: Message['type'], content: string, file?: File) => {
+        const formData = new FormData();
+        formData.append('type', type);
+        formData.append('content', content);
+        if (file) formData.append('file', file);
+
+        try {
+            await http.post('/api/client/chat', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            mutate(); // Refresh messages
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     const handleSend = () => {
         if (!inputValue.trim()) return;
-
-        const newMessage: Message = {
-            id: Date.now(),
-            user: user?.username || 'Guest',
-            avatar: user?.avatar_url || '',
-            content: inputValue,
-            type: 'text',
-            isAdmin: user?.root_admin,
-            isOwn: true,
-            timestamp: new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-            }),
-        };
-
-        setMessages([...messages, newMessage]);
+        sendMessage('text', inputValue);
         setInputValue('');
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') handleSend();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            sendMessage('image', 'Sent an image', e.target.files[0]);
+        }
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            const audioChunks: BlobPart[] = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioFile = new File([audioBlob], 'voice_message.wav', { type: 'audio/wav' });
+                sendMessage('audio', 'Sent a voice message', audioFile);
+
+                mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error('Error accessing microphone:', err);
+            alert('Could not access microphone.');
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const handleShareWork = () => {
+        // Simple implementation: Share current URL
+        sendMessage('share', `Check out this page: ${window.location.href}`);
     };
 
     return (
@@ -176,57 +230,107 @@ export default () => {
                             </div>
                             <button
                                 type='button'
+                                title='Close chat'
+                                aria-label='Close chat'
                                 onClick={() => setIsOpen(false)}
                                 className='text-gray-400 hover:text-white'
-                                aria-label='Close chat'
-                                title='Close chat'
                             >
                                 <FontAwesomeIcon icon={faTimes} />
                             </button>
                         </Header>
 
                         <MessagesArea>
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'}`}
-                                >
-                                    {!msg.isOwn && (
-                                        <div className='flex items-center gap-2 mb-1 ml-1'>
-                                            <span className='text-xs text-gray-400 font-bold'>{msg.user}</span>
-                                            {msg.isAdmin && (
-                                                <AdminBadge>
-                                                    <FontAwesomeIcon icon={faUserShield} size='xs' />
-                                                    ADMIN
-                                                </AdminBadge>
-                                            )}
-                                        </div>
-                                    )}
-                                    <MessageBubble isOwn={msg.isOwn}>
-                                        {msg.type === 'text' && msg.content}
-                                        {msg.type === 'share' && (
-                                            <div className='flex items-center gap-2 bg-black/20 p-2 rounded'>
-                                                <FontAwesomeIcon icon={faServer} className='text-yellow-400' />
-                                                <span>Shared Server Config</span>
+                            {messages?.map((msg) => {
+                                const isOwn = msg.user.username === user?.username;
+                                const sharedUrl = msg.type === 'share' ? msg.content.split(': ')[1] : undefined;
+
+                                return (
+                                    <div
+                                        key={msg.id}
+                                        className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}
+                                    >
+                                        {!isOwn && (
+                                            <div className='flex items-center gap-2 mb-1 ml-1'>
+                                                <span className='text-xs text-gray-400 font-bold'>
+                                                    {msg.user.username}
+                                                </span>
+                                                {msg.user.root_admin && (
+                                                    <AdminBadge>
+                                                        <FontAwesomeIcon icon={faUserShield} size='xs' />
+                                                        ADMIN
+                                                    </AdminBadge>
+                                                )}
                                             </div>
                                         )}
-                                    </MessageBubble>
-                                    <span className='text-[10px] text-gray-500 mt-1 mx-1'>{msg.timestamp}</span>
-                                </div>
-                            ))}
+                                        <MessageBubble isOwn={isOwn}>
+                                            {msg.type === 'text' && msg.content}
+                                            {msg.type === 'share' && sharedUrl && (
+                                                <div className='flex flex-col gap-1'>
+                                                    <span className='text-xs opacity-75'>Shared a link:</span>
+                                                    <a
+                                                        href={sharedUrl}
+                                                        target='_blank'
+                                                        rel='noreferrer'
+                                                        className='text-blue-300 underline break-all'
+                                                    >
+                                                        {sharedUrl}
+                                                    </a>
+                                                </div>
+                                            )}
+                                            {msg.type === 'image' && msg.attachment_url && (
+                                                <SharedImage src={msg.attachment_url} alt='Shared' />
+                                            )}
+                                            {msg.type === 'audio' && msg.attachment_url && (
+                                                <SharedAudio controls src={msg.attachment_url} />
+                                            )}
+                                        </MessageBubble>
+                                        <span className='text-[10px] text-gray-500 mt-1 mx-1'>
+                                            {new Date(msg.created_at).toLocaleTimeString([], {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                            })}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                             <div ref={messagesEndRef} />
                         </MessagesArea>
 
                         <InputArea>
-                            <ActionButton title='Share Work' aria-label='Share work'>
+                            <ActionButton title='Share Work' aria-label='Share Work' onClick={handleShareWork}>
                                 <FontAwesomeIcon icon={faServer} />
                             </ActionButton>
-                            <ActionButton title='Send Image' aria-label='Send image'>
+
+                            <label htmlFor='chat-image-upload' className='sr-only'>
+                                Upload image
+                            </label>
+                            <input
+                                id='chat-image-upload'
+                                type='file'
+                                title='Upload image'
+                                aria-label='Upload image'
+                                ref={fileInputRef}
+                                className='hidden'
+                                accept='image/*'
+                                onChange={handleImageUpload}
+                            />
+                            <ActionButton
+                                title='Send Image'
+                                aria-label='Send Image'
+                                onClick={() => fileInputRef.current?.click()}
+                            >
                                 <FontAwesomeIcon icon={faImage} />
                             </ActionButton>
-                            <ActionButton title='Send Audio' aria-label='Send audio'>
-                                <FontAwesomeIcon icon={faMicrophone} />
+
+                            <ActionButton
+                                title={isRecording ? 'Stop Recording' : 'Send Audio'}
+                                aria-label={isRecording ? 'Stop Recording' : 'Send Audio'}
+                                onClick={isRecording ? stopRecording : startRecording}
+                                className={isRecording ? 'text-red-500 animate-pulse' : ''}
+                            >
+                                <FontAwesomeIcon icon={isRecording ? faStop : faMicrophone} />
                             </ActionButton>
+
                             <TextInput
                                 placeholder='Type a message...'
                                 value={inputValue}
@@ -235,10 +339,10 @@ export default () => {
                             />
                             <button
                                 type='button'
+                                title='Send message'
+                                aria-label='Send message'
                                 onClick={handleSend}
                                 className='w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center hover:bg-purple-500 transition-colors'
-                                aria-label='Send message'
-                                title='Send message'
                             >
                                 <FontAwesomeIcon icon={faPaperPlane} size='sm' />
                             </button>
@@ -248,11 +352,11 @@ export default () => {
             </AnimatePresence>
 
             <ChatButton
+                aria-label={isOpen ? 'Close global chat' : 'Open global chat'}
+                title={isOpen ? 'Close global chat' : 'Open global chat'}
                 onClick={() => setIsOpen(!isOpen)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                aria-label={isOpen ? 'Close chat' : 'Open chat'}
-                title={isOpen ? 'Close chat' : 'Open chat'}
             >
                 <FontAwesomeIcon icon={isOpen ? faTimes : faComments} />
             </ChatButton>
