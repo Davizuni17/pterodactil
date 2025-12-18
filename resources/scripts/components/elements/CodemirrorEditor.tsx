@@ -210,7 +210,7 @@ export default ({ style, initialContent, filename, mode, fetchContent, onContent
 
     return (
         <EditorContainer style={style}>
-            <textarea ref={ref} />
+            <textarea ref={ref} aria-label='Code editor' title='Code editor' />
         </EditorContainer>
     );
 };

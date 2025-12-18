@@ -133,9 +133,12 @@ export default ({ className }: WithClassname) => {
                 </Fade>
             </Portal>
             <input
+                id={'file-upload-input'}
                 type={'file'}
                 ref={fileUploadInput}
                 css={tw`hidden`}
+                aria-label={'Upload files'}
+                title={'Upload files'}
                 onChange={(e) => {
                     if (!e.currentTarget.files) return;
 

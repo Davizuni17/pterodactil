@@ -49,8 +49,11 @@ const FileUploadList = () => {
                     </Tooltip>
                     <Code className={'flex-1 truncate'}>{name}</Code>
                     <button
+                        type={'button'}
                         onClick={cancelFileUpload.bind(this, name)}
                         className={'text-gray-500 hover:text-gray-200 transition-colors duration-75'}
+                        aria-label={`Cancel upload for ${name}`}
+                        title={`Cancel upload for ${name}`}
                     >
                         <XIcon className={'w-5 h-5'} />
                     </button>
@@ -91,9 +94,13 @@ export default () => {
             {count > 0 && (
                 <Tooltip content={`${count} files are uploading, click to view`}>
                     <button
+                        type={'button'}
                         className={'flex items-center justify-center w-10 h-10'}
                         onClick={() => (open.value = true)}
+                        aria-label={`${count} files are uploading. Click to view uploads.`}
+                        title={`${count} files are uploading. Click to view uploads.`}
                     >
+                        <span className={'sr-only'}>{`${count} files are uploading. Click to view uploads.`}</span>
                         <Spinner progress={(progress.uploaded / progress.total) * 100} className={'w-8 h-8'} />
                         <CloudUploadIcon className={'h-3 absolute mx-auto animate-pulse'} />
                     </button>
